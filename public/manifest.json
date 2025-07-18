@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "description": "Genera una scala cromatica da un colore base.",
   "author": "gcta",
-  "main": "plugin.js",
+  "main": "https://raw.githubusercontent.com/gcta/Penpot-Color-Scale/main/public/plugin.js",
   "ui": {
     "url": "https://gcta.github.io/Penpot-Color-Scale/",
     "width": 360,
