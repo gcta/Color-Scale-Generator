@@ -1,31 +1,79 @@
-console.log("Color Scale Plugin loaded");
+penpot.ui.open(
+  'Color Scale Generator',
+  'https://gcta.github.io/Penpot-Color-Scale/'
+);
 
-window.addEventListener("message", async (event) => {
-  const { type, data } = event.data.pluginMessage;
-  if (type !== "generate-scale") return;
+penpot.plugin.onMessage = async (message) => {
+  if (message.type === 'generate-scale') {
+    const color = message.color;
 
-  const doc = await Penpot.currentDocument;
-  const page = await doc.currentPage();
-  const group = await doc.createGroup({ parentId: page.id });
+    // Funzione per convertire un hex in RGB normalizzato
+    function hexToRgb01(hex) {
+      const bigint = parseInt(hex.replace(/^#/, ""), 16);
+      const r = ((bigint >> 16) & 255) / 255;
+      const g = ((bigint >> 8) & 255) / 255;
+      const b = (bigint & 255) / 255;
+      return { r, g, b };
+    }
 
-  for (let i = 0; i < data.colors.length; i++) {
-    const color = data.colors[i];
-    await doc.createRect({
-      parentId: group.id,
-      x: i * 100,
-      y: 0,
-      width: 80,
-      height: 80,
-      fills: [{ type: "SOLID_COLOR", color }]
-    });
+    const grayScale = [
+      0.9551, 0.8945, 0.8297, 0.7668, 0.6993,
+      0.6334, 0.5624, 0.5068, 0.4495, 0.3904,
+      0.3250, 0.2603, 0.1930
+    ];
 
-    await doc.createText({
-      parentId: group.id,
-      x: i * 100,
-      y: 90,
-      text: data.hexCodes[i],
-      fontSize: 14,
-      fills: [{ type: "SOLID_COLOR", color: { r: 0, g: 0, b: 0 } }]
-    });
+    const parsed = culori.oklch(culori.parse(color));
+    const hue = parsed.h;
+    const baseChroma = parsed.c;
+
+    const nodes = [];
+
+    for (let i = 0; i < grayScale.length; i++) {
+      const targetL = grayScale[i];
+      let chroma = baseChroma;
+
+      while (chroma > 0) {
+        const attempt = culori.oklch({ l: targetL, c: chroma, h: hue });
+        const rgb = culori.rgb(attempt);
+        if (rgb.r >= 0 && rgb.r <= 1 && rgb.g >= 0 && rgb.g <= 1 && rgb.b >= 0 && rgb.b <= 1) {
+          const hex = culori.formatHex(rgb);
+          const rgb01 = hexToRgb01(hex);
+
+          const rect = penpot.createShape({
+            shape: {
+              type: "rectangle",
+              corner_radius: 4
+            },
+            width: 60,
+            height: 60,
+            fill: {
+              color: rgb01,
+              alpha: 1,
+              pattern: "solid"
+            }
+          });
+
+          const text = penpot.createText({
+            text: hex,
+            font_size: 10,
+            color: { r: 0, g: 0, b: 0 },
+            alignment: "center",
+            width: 60,
+            height: 16
+          });
+
+          const group = penpot.groupNodes([rect, text], {
+            x: i * 70,
+            y: 0
+          });
+
+          nodes.push(group);
+          break;
+        }
+        chroma -= 0.01;
+      }
+    }
+
+    penpot.currentPage.append(...nodes);
   }
-});
+};
