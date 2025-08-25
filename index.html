@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Color Scale Generator</title>
+  <meta name="viewport" content="width=340">
+  <style>
+    body {
+      font-family: Inter, Arial, sans-serif;
+      background: #fcfcfc;
+      width: 340px;
+      margin: 0;
+      padding: 16px;
+      box-sizing: border-box;
+    }
+    h2 {
+      font-size: 18px;
+      margin-bottom: 10px;
+    }
+    .input-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    #color-input {
+      width: 120px;
+      font-size: 16px;
+      padding: 6px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+    #swatch {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: 1px solid #bbb;
+      margin-left: 14px;
+      background: #2F75C5;
+    }
+    #generate-btn {
+      margin-left: 18px;
+      padding: 8px 18px;
+      font-size: 16px;
+      border-radius: 7px;
+      border: none;
+      background: #2F75C5;
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    #generate-btn:hover {
+      background: #1b4e80;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 18px;
+    }
+    th, td {
+      font-size: 13px;
+      text-align: center;
+      padding: 7px;
+      border-bottom: 1px solid #eee;
+    }
+    .color-cell {
+      width: 38px; height: 24px; border-radius: 5px; margin: 0 auto; border: 1px solid #ddd;
+    }
+    .hex-cell { font-family: monospace; }
+    .oklch-cell { font-size: 12px; color: #444; }
+  </style>
+  <!-- Culori JS via CDN -->
+  <script src="https://unpkg.com/culori"></script>
+</head>
+<body>
+  <h2>Color Scale Generator</h2>
+  <div class="input-row">
+    <input type="text" id="color-input" maxlength="7" value="#2F75C5" />
+    <div id="swatch"></div>
+    <button id="generate-btn">Generate Scale</button>
+  </div>
+  <table id="result-table" style="display:none;">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Color</th>
+        <th>HEX</th>
+        <th>OKLCH</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+  <script>
+    // ---- UI logic ----
+    const colorInput = document.getElementById('color-input');
+    const swatch = document.getElementById('swatch');
+    const generateBtn = document.getElementById('generate-btn');
+    const resultTable = document.getElementById('result-table');
+    const tbody = resultTable.querySelector('tbody');
+
+    // Predefined luminances for scale (from grays)
+    const scaleL = [
+      0.9551, 0.8945, 0.8297, 0.7668, 0.6993,
+      0.6334, 0.5624, 0.5068, 0.4495, 0.3904,
+      0.3250, 0.2603, 0.1930
+    ];
+
+    function updateSwatch(hex) {
+      swatch.style.background = culori.isValid(hex) ? hex : "#fff";
+      swatch.style.borderColor = culori.isValid(hex) ? "#bbb" : "#f88";
+    }
+
+    colorInput.addEventListener('input', e => {
+      updateSwatch(e.target.value);
+    });
+
+    function findChroma(l, h, maxC) {
+      for (let c = maxC; c >= 0; c -= 0.002) {
+        let candidate = { mode: "oklch", l, c, h };
+        let rgb = culori.oklch(candidate);
+        if (culori.inGamut(rgb, "rgb")) return c;
+      }
+      return 0;
+    }
+
+    generateBtn.addEventListener('click', () => {
+      let hex = colorInput.value.trim();
+      if (!/^#[0-9A-Fa-f]{6}$/.test(hex)) {
+        colorInput.style.borderColor = "#f88";
+        return;
+      }
+      colorInput.style.borderColor = "#ddd";
+
+      let inputCol = culori.parse(hex);
+      if (!inputCol) return;
+
+      let oklch = culori.oklch(inputCol);
+      let h = oklch.h; // fixed hue
+
+      let arrColors = [], arrOklch = [];
+
+      scaleL.forEach((l) => {
+        let c = findChroma(l, h, oklch.c);
+        let colorObj = { mode: "oklch", l, c, h };
+        let hexOut = culori.formatHex(colorObj);
+        let oklchStr = `oklch(${(l*100).toFixed(2)}% ${c.toFixed(3)} ${h.toFixed(2)})`;
+        arrColors.push(hexOut);
+        arrOklch.push(oklchStr);
+      });
+
+      // Update table
+      resultTable.style.display = "";
+      tbody.innerHTML = "";
+      arrColors.forEach((hex, i) => {
+        let oklch = arrOklch[i];
+        let row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${(i+1)*100}</td>
+          <td><div class="color-cell" style="background:${hex};"></div></td>
+          <td class="hex-cell">${hex}</td>
+          <td class="oklch-cell">${oklch}</td>
+        `;
+        tbody.appendChild(row);
+      });
+    });
+
+    // Initial swatch
+    updateSwatch(colorInput.value);
+  </script>
+</body>
+</html>
