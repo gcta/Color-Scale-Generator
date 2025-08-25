@@ -5,10 +5,8 @@
   "version": "1.0.0",
   "main": "index.html",
   "icon": "icon.svg",
-  "description": "Genera una scala colore...",
+  "description": "Genera una scala colore di 13 campioni nello spazio OKLCH mantenendo Hue fisso e Luminanza predefinita.",
   "author": "gcta",
-  "permissions": ["read", "write"],
   "homepage_url": "https://github.com/gcta/Color-Scale-Generator",
-  "repository": "https://github.com/gcta/Color-Scale-Generator",
-  "license": "MIT"
+  "repository": "https://github.com/gcta/Color-Scale-Generator"
 }
